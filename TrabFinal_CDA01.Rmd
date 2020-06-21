@@ -1,0 +1,155 @@
+---
+title: "Trabalho Final CDA MDT-02"
+author: "Alexandre e Jorge"
+date: "17/06/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Instala as bibliotecas necessárias
+
+```{r}
+
+#install.packages("readr")
+#install.packages("dplyr")
+#install.packages("tidyverse")
+#install.packages("lubridate")
+
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+
+
+```
+
+Definição Geral de Funções
+
+```{r}
+
+left = function(text, num_char) {
+  substr(text, 1, num_char)
+}
+ 
+mid = function(text, start_num, num_char) {
+  substr(text, start_num, start_num + num_char - 1)
+}
+ 
+right = function(text, num_char) {
+  substr(text, nchar(text) - (num_char-1), nchar(text))
+}
+
+```
+
+
+Leitura dos arquivos de dados de origem
+
+```{r}
+
+# Leitura de Arquivos de Viagens
+
+DiretorioBase="/cloud/project/Data/Viagem/"
+ArquivosNomes<-list.files(DiretorioBase, pattern="*.csv")
+
+
+Pagamento <- read_csv2(paste0(DiretorioBase,ArquivosNomes[1]), locale = locale(encoding = "latin1"))
+Passagem <- read_csv2(paste0(DiretorioBase,ArquivosNomes[2]), locale = locale(encoding = "latin1"))
+Trecho <- read_csv2(paste0(DiretorioBase,ArquivosNomes[3]), locale = locale(encoding = "latin1"))
+Viagem <- read_csv2(paste0(DiretorioBase,ArquivosNomes[4]), locale = locale(encoding = "latin1"))
+
+
+# Leitura de Arquivos de Cartao
+
+DiretorioBase="/cloud/project/Data/Cartao/"
+ArquivosNomes<-list.files(DiretorioBase, pattern="*.zip")
+
+L <- length(ArquivosNomes)
+
+Cartao <- read_csv2(paste0(DiretorioBase,ArquivosNomes[1]), locale = locale(encoding = "latin1"))
+Cartao$`MÊS EXTRATO` <- as.integer(as.character(Cartao$`MÊS EXTRATO`))
+
+for (i in 2:L) {
+      Temporario <- read_csv2(paste0(DiretorioBase,ArquivosNomes[i]), locale = locale(encoding = "latin1"))
+      Temporario$`MÊS EXTRATO` <- as.integer(as.character(Temporario$`MÊS EXTRATO`))
+      Cartao <- bind_rows(Cartao,Temporario)
+    
+}
+
+# Ajusta Campos de Data para os formatos corretos
+
+Cartao$`DATA TRANSAÇÃO` <- as.Date(dmy(Cartao$`DATA TRANSAÇÃO`))
+Passagem$`Data_ emissao_compra` <- as.Date(dmy(Passagem$`Data_ emissao_compra`))
+
+Temporario <- NULL
+
+```
+
+Inspecionar Cartoes
+
+
+```{r}
+
+glimpse(Cartao)
+
+summary(Cartao)
+
+
+```
+
+Inspecionar Pagamentos
+
+
+```{r}
+
+glimpse(Pagamento)
+
+summary(Pagamento)
+
+
+```
+
+Inspecionar Passagem
+
+
+```{r}
+
+glimpse(Passagem)
+
+summary(Passagem)
+
+
+```
+
+Inspecionar Trecho
+
+
+```{r}
+
+glimpse(Trecho)
+
+summary(Trecho)
+
+
+```
+
+Inspecionar Viagem
+
+
+```{r}
+
+glimpse(Viagem)
+
+summary(Viagem)
+
+
+```
+
+
+
+
+
+
+
