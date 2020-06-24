@@ -1,5 +1,5 @@
 ---
-title: "Trabalho Final CDA MDT-02"
+title: "Trabalho Final CDA MDT-01"
 author: "Alexandre e Jorge"
 date: "17/06/2020"
 output: html_document
@@ -17,11 +17,17 @@ Instala as bibliotecas necessárias
 #install.packages("dplyr")
 #install.packages("tidyverse")
 #install.packages("lubridate")
+#install.packages("hrbrthemes")
+#install.packages("viridis")
+
 
 library(readr)
 library(dplyr)
 library(tidyverse)
 library(lubridate)
+library(ggplot2)
+library(hrbrthemes)
+library(viridis)
 
 
 ```
@@ -55,10 +61,10 @@ DiretorioBase="/cloud/project/Data/Viagem/"
 ArquivosNomes<-list.files(DiretorioBase, pattern="*.csv")
 
 
-Pagamento <- read_csv2(paste0(DiretorioBase,ArquivosNomes[1]), locale = locale(encoding = "latin1"))
-Passagem <- read_csv2(paste0(DiretorioBase,ArquivosNomes[2]), locale = locale(encoding = "latin1"))
-Trecho <- read_csv2(paste0(DiretorioBase,ArquivosNomes[3]), locale = locale(encoding = "latin1"))
-Viagem <- read_csv2(paste0(DiretorioBase,ArquivosNomes[4]), locale = locale(encoding = "latin1"))
+df_Pagamento <- read_csv2(paste0(DiretorioBase,ArquivosNomes[1]), locale = locale(encoding = "latin1"))
+df_Passagem <- read_csv2(paste0(DiretorioBase,ArquivosNomes[2]), locale = locale(encoding = "latin1"))
+df_Trecho <- read_csv2(paste0(DiretorioBase,ArquivosNomes[3]), locale = locale(encoding = "latin1"))
+df_Viagem <- read_csv2(paste0(DiretorioBase,ArquivosNomes[4]), locale = locale(encoding = "latin1"))
 
 
 # Leitura de Arquivos de Cartao
@@ -68,20 +74,20 @@ ArquivosNomes<-list.files(DiretorioBase, pattern="*.zip")
 
 L <- length(ArquivosNomes)
 
-Cartao <- read_csv2(paste0(DiretorioBase,ArquivosNomes[1]), locale = locale(encoding = "latin1"))
-Cartao$`MÊS EXTRATO` <- as.integer(as.character(Cartao$`MÊS EXTRATO`))
+df_Cartao <- read_csv2(paste0(DiretorioBase,ArquivosNomes[1]), locale = locale(encoding = "latin1"))
+df_Cartao$`MÊS EXTRATO` <- as.integer(as.character(df_Cartao$`MÊS EXTRATO`))
 
 for (i in 2:L) {
       Temporario <- read_csv2(paste0(DiretorioBase,ArquivosNomes[i]), locale = locale(encoding = "latin1"))
       Temporario$`MÊS EXTRATO` <- as.integer(as.character(Temporario$`MÊS EXTRATO`))
-      Cartao <- bind_rows(Cartao,Temporario)
+      df_Cartao <- bind_rows(df_Cartao,Temporario)
     
 }
 
 # Ajusta Campos de Data para os formatos corretos
 
-Cartao$`DATA TRANSAÇÃO` <- as.Date(dmy(Cartao$`DATA TRANSAÇÃO`))
-Passagem$`Data_ emissao_compra` <- as.Date(dmy(Passagem$`Data_ emissao_compra`))
+df_Cartao$`DATA TRANSAÇÃO` <- as.Date(dmy(df_Cartao$`DATA TRANSAÇÃO`))
+df_Passagem$`Data_ emissao_compra` <- as.Date(dmy(df_Passagem$`Data_ emissao_compra`))
 
 Temporario <- NULL
 
@@ -92,9 +98,9 @@ Inspecionar Cartoes
 
 ```{r}
 
-glimpse(Cartao)
+glimpse(df_Cartao)
 
-summary(Cartao)
+summary(df_Cartao)
 
 
 ```
@@ -104,9 +110,9 @@ Inspecionar Pagamentos
 
 ```{r}
 
-glimpse(Pagamento)
+glimpse(df_Pagamento)
 
-summary(Pagamento)
+summary(df_Pagamento)
 
 
 ```
@@ -116,9 +122,9 @@ Inspecionar Passagem
 
 ```{r}
 
-glimpse(Passagem)
+glimpse(df_Passagem)
 
-summary(Passagem)
+summary(df_Passagem)
 
 
 ```
@@ -128,9 +134,9 @@ Inspecionar Trecho
 
 ```{r}
 
-glimpse(Trecho)
+glimpse(df_Trecho)
 
-summary(Trecho)
+summary(df_Trecho)
 
 
 ```
@@ -140,12 +146,316 @@ Inspecionar Viagem
 
 ```{r}
 
-glimpse(Viagem)
+glimpse(df_Viagem)
 
-summary(Viagem)
+summary(df_Viagem)
 
 
 ```
+
+Junção das tabelas relacionadas as despesas de Viagem
+
+
+```{r}
+
+df_ViagemPagamento <- left_join(df_Viagem,df_Pagamento)
+df_ViagemTrecho <- left_join(df_Viagem,df_Trecho)
+df_ViagemPassagem <- left_join(df_Viagem,df_Passagem)
+
+```
+
+Gera tabelas de Viagens por Orgão Solicitante 
+
+
+```{r}
+
+
+# Agrupa e soma valores gastos em Diárias, Passagens e Outras Despesas por Órgao solicitante para as Viagens Realizadas
+
+df_valor_org_solicitante <- df_Viagem %>% 
+                              filter(Situacao=="Realizada") %>%
+                              group_by(Nome_orgao_solicitante) %>%
+                              summarize(ValorTotalDiarias=sum(Valor_diarias),
+                                        ValorMedioDiarias=mean(Valor_diarias),
+                                        ValorMaxDiarias=max(Valor_diarias),
+                                        ValorTotalOutros=sum(Valor_outros_gastos),
+                                        ValorMedioOutros=mean(Valor_outros_gastos),
+                                        ValorMaxOutros=max(Valor_outros_gastos),
+                                        ValorTotalPassagens=sum(Valor_passagens),
+                                        ValorMedioPassagens=mean(Valor_passagens),
+                                        ValorMaxPassagens=max(Valor_passagens),
+                                        Qtd=n())
+
+# Efetua a separação das Viagens Urgentes
+
+df_valor_org_solic_urgente <- df_Viagem %>% 
+                              filter(Situacao=="Realizada") %>%
+                              group_by(Nome_Orgao_Superior,Viagem_Urgente) %>%
+                              summarize(ValorTotalDiarias=sum(Valor_diarias),
+                                        ValorMedioDiarias=mean(Valor_diarias),
+                                        ValorMaxDiarias=max(Valor_diarias),
+                                        ValorTotalOutros=sum(Valor_outros_gastos),
+                                        ValorMedioOutros=mean(Valor_outros_gastos),
+                                        ValorMaxOutros=max(Valor_outros_gastos),
+                                        ValorTotalPassagens=sum(Valor_passagens),
+                                        ValorMedioPassagens=mean(Valor_passagens),
+                                        ValorMaxPassagens=max(Valor_passagens),
+                                        Qtd=n())
+
+
+```
+
+
+Gráfico dos Órgãos com as 5 maiores despesas de Passagens
+
+```{r}
+
+
+    df_valor_org_solicitante %>%  arrange(desc(ValorTotalPassagens)) %>% head(5)  %>%
+    mutate(Nome_orgao_solicitante=Nome_orgao_solicitante %>% fct_inorder()) %>% 
+    ggplot(aes(fill=Qtd, y=ValorTotalPassagens/1000, x=Nome_orgao_solicitante)) + 
+    geom_bar(position="stack", stat="identity") +
+    labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    coord_flip() 
+
+    df_valor_org_solicitante %>%  arrange(desc(ValorTotalPassagens)) %>% head(5)  %>%
+    mutate(Nome_orgao_solicitante = fct_reorder(Nome_orgao_solicitante, (ValorTotalPassagens))) %>%
+    ggplot(aes(fill=Qtd, y=ValorTotalPassagens/1000, x=Nome_orgao_solicitante)) + 
+    geom_bar(position="stack", stat="identity") +
+    labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    coord_flip() 
+
+
+```
+
+
+Gráfico dos Órgãos com as 5 maiores despesas de Diárias
+
+```{r}
+
+
+    df_valor_org_solicitante %>%  arrange(desc(ValorTotalDiarias)) %>% head(5)  %>%
+    mutate(Nome_orgao_solicitante=Nome_orgao_solicitante %>% fct_inorder()) %>% 
+    ggplot(aes(fill=Qtd, y=ValorTotalDiarias/1000, x=Nome_orgao_solicitante)) + 
+    geom_bar(position="stack", stat="identity") +
+    labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    coord_flip() 
+
+    df_valor_org_solicitante %>%  arrange(desc(ValorTotalDiarias)) %>% head(5)  %>%
+    mutate(Nome_orgao_solicitante = fct_reorder(Nome_orgao_solicitante, (ValorTotalDiarias))) %>%
+    ggplot(aes(fill=Qtd, y=ValorTotalDiarias/1000, x=Nome_orgao_solicitante)) + 
+    geom_bar(position="stack", stat="identity") +
+    labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    coord_flip() 
+
+
+```
+
+Gráfico dos Órgãos com as 5 maiores Outras despesas
+
+```{r}
+
+
+    df_valor_org_solicitante %>%  arrange(desc(ValorTotalOutros)) %>% head(5)  %>%
+    mutate(Nome_orgao_solicitante=Nome_orgao_solicitante %>% fct_inorder()) %>% 
+    ggplot(aes(fill=Qtd, y=ValorTotalOutros/1000, x=Nome_orgao_solicitante)) + 
+    geom_bar(position="stack", stat="identity") +
+    labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    coord_flip() 
+
+    df_valor_org_solicitante %>%  arrange(desc(ValorTotalOutros)) %>% head(5)  %>%
+    mutate(Nome_orgao_solicitante = fct_reorder(Nome_orgao_solicitante, (ValorTotalOutros))) %>%
+    ggplot(aes(fill=Qtd, y=ValorTotalOutros/1000, x=Nome_orgao_solicitante)) + 
+    geom_bar(position="stack", stat="identity") +
+    labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    coord_flip() 
+
+
+```
+
+
+
+Gera tabelas de Viagens por dia e Orgão Solicitante 
+
+
+```{r}
+
+# Agrupa e soma valores gastos por dia e Órgao solicitante para as Viagens Realizadas
+
+df_valor_org_dia <- df_Viagem %>% 
+                              filter(Situacao=="Realizada") %>%
+                              group_by(Nome_orgao_solicitante,Periodo_Data_de_inicio) %>%
+                              summarize(ValorTotalDiarias=sum(Valor_diarias),
+                                        ValorTotalOutros=sum(Valor_outros_gastos),
+                                        ValorTotalPassagens=sum(Valor_passagens),
+                                        Qtd=n())
+df_valor_org_dia$Periodo_Data_de_inicio <- as.Date(dmy(df_valor_org_dia$Periodo_Data_de_inicio))
+
+
+```
+
+
+Gráficos Diários do Total de Passagens, Diárias e Outras Despesas
+
+
+```{r}
+
+  df_valor_org_dia %>% arrange((Periodo_Data_de_inicio)) %>%
+  ggplot() + 
+  geom_line( aes(x = Periodo_Data_de_inicio, y = ValorTotalPassagens/1000), color = "red") +
+  xlab('Data') +
+  ylab('Valor de Passagens(mil R$)') +
+  labs(color="Legend Text")
+
+
+
+
+ df_valor_org_dia %>% arrange((Periodo_Data_de_inicio)) %>%
+  ggplot() + 
+  geom_line( aes(x = Periodo_Data_de_inicio, y = ValorTotalOutros/1000), color = "blue") +
+  xlab('Data') +
+  ylab('Valor Outras Despesas(mil R$)') +
+  labs(color="Legend Text")
+ 
+ 
+ 
+ 
+  df_valor_org_dia %>% arrange((Periodo_Data_de_inicio)) %>%
+  ggplot() + 
+  geom_line( aes(x = Periodo_Data_de_inicio, y = ValorTotalDiarias/1000), color = "green") +
+  xlab('Data') +
+  ylab('Valor Diárias (mil R$)') +
+  labs(color="Legend Text")
+ 
+
+```
+
+
+Gráfico que apresenta o mix de viagens Urgentes para cada um dos Ministérios
+
+
+```{r}
+
+
+    df_valor_org_solic_urgente %>%  mutate(Total=(ValorTotalPassagens+ValorTotalOutros+ValorTotalDiarias)) %>%
+    ggplot(aes(fill=Viagem_Urgente, y=(Total)/1000, x=reorder(Nome_Orgao_Superior,Total))) + 
+    geom_bar(position="dodge", stat="identity") +
+    labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    coord_flip() 
+
+    
+
+```
+
+
+Distribuição de Despesas de Viages, Diárias Outros por Ministério
+
+```{r}
+
+# BoxPlot
+
+df_Viagem %>% 
+  filter(Situacao=="Realizada") %>%
+  ggplot( aes(x=Nome_Orgao_Superior, y=Valor_diarias+Valor_passagens+Valor_outros_gastos, fill=Nome_Orgao_Superior)) +
+    geom_boxplot() +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=0.01, alpha=0.01) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=10)
+    ) +
+    ggtitle("Distribuição de Despesas de Passagens, Diárias e Outros por Órgão em R$") +
+   xlab('') +
+   ylab('') +
+    coord_flip()
+
+
+
+
+# Violino
+
+df_Viagem %>% 
+  filter(Situacao=="Realizada") %>%
+  ggplot( aes(x=Nome_Orgao_Superior, y=Valor_diarias+Valor_passagens+Valor_outros_gastos, fill=Nome_Orgao_Superior)) +
+    geom_violin() +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=0.01, alpha=0.01) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=10)
+    ) +
+    ggtitle("Distribuição de Despesas de Passagens, Diárias e Outros por Órgão em R$") +
+   xlab('') +
+   ylab('') +
+    coord_flip()
+
+
+
+
+```
+
+
+
+Desenhar o mapa das viagens
+
+
+```{r}
+
+
+# World map is available in the maps package
+
+#install.packages("maps")
+#install.packages("RgoogleMaps")
+library(maps)
+library(RgoogleMaps)
+require(RgoogleMaps)
+
+# No margin
+par(mar=c(0,0,0,0))
+
+# World map
+map('world',
+    col="#f2f2f2", fill=TRUE, bg="white", lwd=0.05,
+    mar=rep(0,4),border=0, ylim=c(-80,80) 
+)
+
+
+# Cities
+Buenos_aires <- c(-58,-34)
+Paris <- c(2,49)
+Melbourne <- c(145,-38)
+
+# Data frame
+data <- rbind(Buenos_aires, Paris, Melbourne) %>% 
+  as.data.frame()
+colnames(data) <- c("long","lat")
+
+df_cidades_origem <- df_Trecho %>% select(Cidade=Origem_Cidade,UF=Origem_UF,Pais=Origem_Pais)
+df_cidades_destino <- df_Trecho %>% select(Cidade=Destino_Cidade,UF=Destino_UF,Pais=Destino_Pais)
+df_cidades <-bind_rows(df_cidades_destino,df_cidades_origem) %>% distinct() 
+Temporario <- df_cidades %>% mutate(Cidade_UF_Pais=str_c(Cidade,as.character(str_replace_na(UF)),Pais,sep = ", ",collapse = NULL ))
+Temporario <- Temporario %>% select(Cidade_UF_Pais)
+Temporario <- (mutate(Temporario, lat=NA, log=NA))
+Temporario <- rename(Temporario,cidade=Cidade_UF_Pais)
+
+Temporario <- with(Temporario,data.frame(cidade=cidade, t(sapply(Temporario$cidade, getGeoCode))))
+
+
+# Show the cities on the map
+map('world',
+    col="#f2f2f2", fill=TRUE, bg="white", lwd=0.05,
+    mar=rep(0,4),border=0, ylim=c(-80,80) 
+)
+points(x=data$long, y=data$lat, col="slateblue", cex=3, pch=20)
+
+```
+
+
+
+
+
 
 
 
