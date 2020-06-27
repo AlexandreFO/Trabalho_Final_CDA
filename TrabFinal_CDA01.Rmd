@@ -19,7 +19,11 @@ Instala as bibliotecas necessárias
 #install.packages("lubridate")
 #install.packages("hrbrthemes")
 #install.packages("viridis")
-
+# World map is available in the maps package
+#install.packages("maps")
+#install.packages("RgoogleMaps")
+#install.packages("ggraph")
+#install.packages("circlize")
 
 library(readr)
 library(dplyr)
@@ -28,6 +32,11 @@ library(lubridate)
 library(ggplot2)
 library(hrbrthemes)
 library(viridis)
+library(maps)
+library(RgoogleMaps)
+library(igraph)
+library(ggraph)
+library(circlize)
 
 
 ```
@@ -47,6 +56,7 @@ mid = function(text, start_num, num_char) {
 right = function(text, num_char) {
   substr(text, nchar(text) - (num_char-1), nchar(text))
 }
+
 
 ```
 
@@ -216,6 +226,7 @@ Gráfico dos Órgãos com as 5 maiores despesas de Passagens
     ggplot(aes(fill=Qtd, y=ValorTotalPassagens/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
     labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    theme(legend.position="bottom") +  
     coord_flip() 
 
     df_valor_org_solicitante %>%  arrange(desc(ValorTotalPassagens)) %>% head(5)  %>%
@@ -223,6 +234,7 @@ Gráfico dos Órgãos com as 5 maiores despesas de Passagens
     ggplot(aes(fill=Qtd, y=ValorTotalPassagens/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
     labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    theme(legend.position="bottom") +
     coord_flip() 
 
 
@@ -239,6 +251,7 @@ Gráfico dos Órgãos com as 5 maiores despesas de Diárias
     ggplot(aes(fill=Qtd, y=ValorTotalDiarias/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
     labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    theme(legend.position="bottom") +
     coord_flip() 
 
     df_valor_org_solicitante %>%  arrange(desc(ValorTotalDiarias)) %>% head(5)  %>%
@@ -246,6 +259,7 @@ Gráfico dos Órgãos com as 5 maiores despesas de Diárias
     ggplot(aes(fill=Qtd, y=ValorTotalDiarias/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
     labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    theme(legend.position="bottom") +
     coord_flip() 
 
 
@@ -261,13 +275,15 @@ Gráfico dos Órgãos com as 5 maiores Outras despesas
     ggplot(aes(fill=Qtd, y=ValorTotalOutros/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
     labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
-    coord_flip() 
+    theme(legend.position="bottom") +
+   coord_flip() 
 
     df_valor_org_solicitante %>%  arrange(desc(ValorTotalOutros)) %>% head(5)  %>%
     mutate(Nome_orgao_solicitante = fct_reorder(Nome_orgao_solicitante, (ValorTotalOutros))) %>%
     ggplot(aes(fill=Qtd, y=ValorTotalOutros/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
     labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    theme(legend.position="bottom") +
     coord_flip() 
 
 
@@ -341,6 +357,7 @@ Gráfico que apresenta o mix de viagens Urgentes para cada um dos Ministérios
     ggplot(aes(fill=Viagem_Urgente, y=(Total)/1000, x=reorder(Nome_Orgao_Superior,Total))) + 
     geom_bar(position="dodge", stat="identity") +
     labs(y="Valor (mil R$)" , x = "Órgão Solicitante")  +  
+    theme(legend.position="bottom") +
     coord_flip() 
 
     
@@ -398,57 +415,192 @@ df_Viagem %>%
 
 
 
-Desenhar o mapa das viagens
+Capturar os dados de Latitude e LOngitude para o mapa das viagens
 
 
 ```{r}
 
 
-# World map is available in the maps package
-
-#install.packages("maps")
-#install.packages("RgoogleMaps")
-library(maps)
-library(RgoogleMaps)
-require(RgoogleMaps)
-
-# No margin
-par(mar=c(0,0,0,0))
-
-# World map
-map('world',
-    col="#f2f2f2", fill=TRUE, bg="white", lwd=0.05,
-    mar=rep(0,4),border=0, ylim=c(-80,80) 
-)
+# Ajusta os nomes de cidades para colher a LAT LONG
 
 
-# Cities
-Buenos_aires <- c(-58,-34)
-Paris <- c(2,49)
-Melbourne <- c(145,-38)
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Telavive"] <- "Tel Aviv"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Oriximiná - Porto Trombetas"] <- "Porto Trombetas"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Cingapura"] <- "Singapura"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Porto Louis"] <- "Port Louis"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Stanford_California"] <- "Stanford California"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Nova Brasilândia D,Oeste"] <- "Nova Brasilândia"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Machadinho D,Oeste"] <- "Machadinho"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Dias d,Ávila"] <- "Dias Ávila"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "São João D,Aliança"] <- "São João D'Aliança"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Bangcoc"] <- "Bangkok"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Mirassol D Oeste"] <- "Mirassol D'Oeste"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Mirassol D,Oeste"] <- "Mirassol D'Oeste"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Alta Floresta do Oeste"] <- "Alta Floresta d'Oeste"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Altamira - Castelo de Sonhos"] <- "Altamira"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Base Presidente Eduardo Frei Montalva"] <- "Eduardo Frei Montalva"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Herval d,Oeste"] <- "Herval d'Oeste"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Porto Velho - Jaci Paraná"] <- "Jaci Paraná"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Porto Velho - União Bandeirantes"] <- "União Bandeirantes"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Lambari D,Oeste"] <- "Lambari D'Oeste"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Barra D,Alcântara"] <- "Barra D'Alcântara"
 
-# Data frame
-data <- rbind(Buenos_aires, Paris, Melbourne) %>% 
-  as.data.frame()
-colnames(data) <- c("long","lat")
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Telavive"] <- "Tel Aviv"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Oriximiná - Porto Trombetas"] <- "Porto Trombetas"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Cingapura"] <- "Singapura"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Porto Louis"] <- "Port Louis"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Stanford_California"] <- "Stanford California"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Nova Brasilândia D,Oeste"] <- "Nova Brasilândia"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Machadinho D,Oeste"] <- "Machadinho"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Dias d,Ávila"] <- "Dias Ávila"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "São João D,Aliança"] <- "São João D'Aliança"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Bangcoc"] <- "Bangkok"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Mirassol D Oeste"] <- "Mirassol D'Oeste"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Mirassol D,Oeste"] <- "Mirassol D'Oeste"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Alta Floresta do Oeste"] <- "Alta Floresta d'Oeste"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Altamira - Castelo de Sonhos"] <- "Altamira"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Base Presidente Eduardo Frei Montalva"] <- "Eduardo Frei Montalva"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Herval d,Oeste"] <- "Herval d'Oeste"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Porto Velho - Jaci Paraná"] <- "Jaci Paraná"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Porto Velho - União Bandeirantes"] <- "União Bandeirantes"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Lambari D,Oeste"] <- "Lambari D'Oeste"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Barra D,Alcântara"] <- "Barra D'Alcântara"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Belém de São Francisco"] <- "São Francisco"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Belém de São Francisco"] <- "São Francisco"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Mount Pleasant  Ilhas Malvinas"] <- "Falkland Islands"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Mount Pleasant  Ilhas Malvinas"] <- "Falkland Islands"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == "Mount Pleasant - Ilhas Malvinas"] <- "Falkland Islands"
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == "Mount Pleasant - Ilhas Malvinas"] <- "Falkland Islands"
+
+df_Trecho$Origem_Pais[df_Trecho$Origem_Pais == "Emirados Árabes"] <- "Emirados Arabes Unidos"
+df_Trecho$Destino_Pais[df_Trecho$Destino_Pais == "Emirados Árabes"] <- "Emirados Arabes Unidos"
+
+#atrocar <- "SapucaíMirim", "Porto Velho  Mutum Paraná" , "Almeirim  Monte Dourado, Pará, Brasil"
+#trocado <- "Sapucaí Mirim", "Mutum Paraná , , "Almeirim, Pará, Brasil"
+
+#atrocar "Jedá, NA, Arábia Saudita" , "AnaheimCA  Califórnia, NA, Estados Unidos da América" , Trajano de Morais, Rio de Janeiro, Brasil
+#trocado "Jidá, NA, Arábia Saudita", "Anaheim , Trajano de Morais, Rio de Janeiro, Brasil
+
+#atrocar "Diamante do Oeste, Paraná, Brasil" "Abidjã, NA, Costa do Marfim" "Pullman city  Washington, NA, Estados Unidos da América"
+#trocado "Diamante do Oeste, Paraná, Brasil" "Abidjan, NA, Costa do Marfim" "Pullman, NA, Estados Unidos da América"
+
+#atrocar "Marraqueche, NA, Marrocos" "Pionguiangue, NA, República Popular Democrática da Coréia" "BiritibaMirim, São Paulo, Brasil"
+#trocado "Marrakech, NA, Marrocos" "Pyongyang, NA, Coréia do Norte" "Biritiba Mirim, São Paulo, Brasil"
+
+#atrocar "Porto Velho  Vista Alegre do Abunã, Rondônia, Brasil" "Governador Lindemberg, Espírito Santo, Brasil" "Liverpoll, NA, Reino Unido"
+#trocado "Vista Alegre do Abunã, Rondônia, Brasil" "Governador Lindenberg, Espírito Santo, Brasil" "Liverpoll, NA, Reino Unido"
+
+#atrocar "PortauPrince, NA, Haiti" "São Luís do Norte, Goiás, Brasil" "Pau  PyrénéesAtlantiques, NA, França" "Porto Velho  Abunã, Rondônia, Brasil" "Baku, NA, Azerbaidjão" , "Arquipélago do Bailique, Amapá, Brasil"
+#trocado "Porto Principe, NA, Haiti" "São Luís do Norte, Goiás, Brasil" "Pau  Pyrénées, NA, França" "Porto Velho  Abunã, Rondônia, Brasil" "Baku, NA, Azerbaijão" , "Arquipélago do Bailique, Amapá, Brasil"
+
+#atrocar "PariqueraAçu, São Paulo, Brasil" "San Luiz, NA, Argentina" "GuardaMor, Minas Gerais, Brasil" "Porto Velho  Nova Califórnia, Rondônia, Brasil" "Porto Velho  São Carlos, Rondônia, Brasil" "EmbuGuaçu, São Paulo, Brasil"
+#trocado "Pariquera-Açu, São Paulo, Brasil" "San Luiz, NA, Argentina" "Guarda-Mor, Minas Gerais, Brasil" "Porto Velho, Rondônia, Brasil" "São Carlos, Rondônia, Brasil" "EmbuGuaçu, São Paulo, Brasil"
+
+#atrocar "Uagadugu, NA, Burkina-Fasso" "ClermontFerrand, NA, França" "AdisAbaba, NA, Etiópia" "GuajaráMirim, Rondônia, Brasil"
+#trocado "Uagadugu, NA, Burkina Faso" "Clermont-Ferrand, NA, França" "Adis-Ababa, NA, Etiópia" "Guajará-Mirim, Rondônia, Brasil"
+
+#atrocar "IgarapéMiri, Pará, Brasil" "NãoMeToque, Rio Grande do Sul, Brasil" "ToméAçu, Pará, Brasil" "ApicumAçu, Maranhão, Brasil" "MogiGuaçú, São Paulo, Brasil" "CearáMirim, Rio Grande do Norte, Brasil" "VenhaVer, Rio Grande do Norte, Brasil" "VenhaVer, Rio Grande do Norte, Brasil" "PeixeBoi, Pará, Brasil"
+#trocado "Igarapé-Miri, Pará, Brasil" "Não-Me-Toque, Rio Grande do Sul, Brasil" "Tomé-Açu, Pará, Brasil" "Apicum-Açu, Maranhão, Brasil" "Mogi-Guaçú, São Paulo, Brasil" "CearáMirim, Rio Grande do Norte, Brasil" "Venha-Ver, Rio Grande do Norte, Brasil" "Peixe-Boi, Pará, Brasil"
+
+
+# Limpeza de caracteres
+
+df_Trecho$Origem_Cidade <- gsub(",","'",df_Trecho$Origem_Cidade)
+df_Trecho$Destino_Cidade <- gsub(",","'",df_Trecho$Destino_Cidade)
+
+df_Trecho$Origem_Cidade <- gsub("-","",df_Trecho$Origem_Cidade)
+df_Trecho$Destino_Cidade <- gsub("-","",df_Trecho$Destino_Cidade)
+
+
+# Limpeza do País de Destino/Origem
+
+atrocar <- "Burkina-Fasso"
+trocado <- "Burkina Faso"
+df_Trecho$Origem_Pais[df_Trecho$Origem_Pais == atrocar] <- trocado
+df_Trecho$Destino_Pais[df_Trecho$Destino_Pais == atrocar] <- trocado
+
+# Limpeza da Cidade de Destino/Origem
+
+atrocar <- "PeixeBoi"
+trocado <- "Peixe-Boi"
+df_Trecho$Origem_Cidade[df_Trecho$Origem_Cidade == atrocar] <- trocado
+df_Trecho$Destino_Cidade[df_Trecho$Destino_Cidade == atrocar] <- trocado
+
+# Testa a captura da Latitude Longitude da cidade
+
+getGeoCode("Kitakyushu-shi, NA, Japão")
+
+
+# Identifica as cidades com problema de coleta de Latitude Longitude
 
 df_cidades_origem <- df_Trecho %>% select(Cidade=Origem_Cidade,UF=Origem_UF,Pais=Origem_Pais)
 df_cidades_destino <- df_Trecho %>% select(Cidade=Destino_Cidade,UF=Destino_UF,Pais=Destino_Pais)
-df_cidades <-bind_rows(df_cidades_destino,df_cidades_origem) %>% distinct() 
-Temporario <- df_cidades %>% mutate(Cidade_UF_Pais=str_c(Cidade,as.character(str_replace_na(UF)),Pais,sep = ", ",collapse = NULL ))
-Temporario <- Temporario %>% select(Cidade_UF_Pais)
-Temporario <- (mutate(Temporario, lat=NA, log=NA))
-Temporario <- rename(Temporario,cidade=Cidade_UF_Pais)
 
-Temporario <- with(Temporario,data.frame(cidade=cidade, t(sapply(Temporario$cidade, getGeoCode))))
+df_cidades <- bind_rows(df_cidades_destino,df_cidades_origem) %>% distinct()
+df_cidades <- df_cidades %>% filter(df_cidades$Cidade != "Inválido")
+
+Temporario <- df_cidades %>% mutate(cidade=str_c(Cidade,as.character(str_replace_na(UF)),Pais,sep = ", ",collapse = NULL ))
+Temporario <- Temporario %>% select(cidade)
+Temporario <- (mutate(Temporario, lat=NA, lon=NA)) 
+
+Temporario<-ldply(Temporario$cidade, function(Temporario) getGeoCode(Temporario))
+
+df_cidade_com_coord <- bind_cols(df_cidades,Temporario)
+
+
+# Contagem de Cidades onde houve viagens
+
+qtd_cidade <- left_join(df_Trecho,df_cidade_com_coord,by=c("Origem_Cidade"="Cidade"),"Pais_Origem"="Pais") %>% 
+          select (cidade) %>%
+          group_by(cidade) %>% count()
+
+df_cidade_com_coord <- left_join(df_cidade_com_coord , qtd_cidade)
+
+
+# Salva data Frames tratados para uso futuro
+
+write.csv(df_cidade_com_coord, "/cloud/project/Data/cidade_com_coord.csv", row.names = FALSE)  
+write.csv(df_Trecho, "/cloud/project/Data/Trecho_tratado.csv", row.names = FALSE)  
+
+
+#Debug do mapeamento de Latitude e Longitude
+
+# Temporario<-ldply(Temporario$cidade, function(Temporario) getGeoCode(Temporario), .inform = TRUE)
+# Temporario <- with(Temporario,data.frame(cidade=cidade, t(sapply(Temporario$cidade, getGeoCode))))
+#df_Todas_Coordenadas <- Temporario
+#df_Todas_Coordenadas_Cidade <- df_Todas_Coordenadas
+
+
+
+
+#knitr::kable(
+#  data.frame(cidade=cidades,x),
+#  format="markdown",
+#  digits=4)
 
 
 # Show the cities on the map
+
 map('world',
-    col="#f2f2f2", fill=TRUE, bg="white", lwd=0.05,
+    col="#f2f2f2", fill=TRUE, bg="gray", lwd=0.05,
     mar=rep(0,4),border=0, ylim=c(-80,80) 
 )
-points(x=data$long, y=data$lat, col="slateblue", cex=3, pch=20)
+points(x=Temporario$lon, y=Temporario$lat, col="slateblue", cex=0.5, pch=20)
+
+```
+
+
+Apresentação no Mapa das viagens internacionais fora do Brasil
+
+```{r}
+
+
+# Trechos de Viagens Internacionais Fora do Brasil
+
+df_Nao_Brasil <- df_Trecho %>% filter(df_Trecho$Origem_Pais!="Brasil" & 
+                                   df_Trecho$Destino_Pais!="Brasil" )
+
+
 
 ```
 
@@ -457,7 +609,99 @@ points(x=data$long, y=data$lat, col="slateblue", cex=3, pch=20)
 
 
 
+Gera um grafo 3D com os países para os quais houve viagem
 
+```{r}
+
+#install.packages("igraph")
+# install.packages("networkD3")
+
+# Libraries
+library(igraph)
+library(networkD3)
+
+# create a dataset:
+data <- df_Trecho %>% select(from=Origem_Pais , to=Destino_Pais) %>% distinct()
+
+
+# Plot
+p <- simpleNetwork(data, height="100px", width="100px",        
+        Source = 1,                 # column number of source
+        Target = 2,                 # column number of target
+        linkDistance = 10,          # distance between node. Increase this value to have more space between nodes
+        charge = -900,                # numeric value indicating either the strength of the node repulsion (negative value) or attraction (positive value)
+        fontSize = 10,               # size of the node names
+        fontFamily = "serif",       # font og node names
+        linkColour = "#666",        # colour of edges, MUST be a common colour for the whole graph
+        nodeColour = "#69b3a2",     # colour of nodes, MUST be a common colour for the whole graph
+        opacity = 0.9,              # opacity of nodes. 0=transparent. 1=no transparency
+        zoom = T                    # Can you zoom on the figure?
+        )
+
+
+# save the widget
+library(htmlwidgets)
+saveWidget(p, file=paste0( getwd(), "/networkInteractive2.html"))
+
+
+
+```
+
+
+Gera um grafo 3D com os países para os quais houve viagem com origem e destino fora do Brasil
+
+```{r}
+
+
+
+# create a dataset:
+data <- df_Nao_Brasil %>% select(from=Origem_Pais , to=Destino_Pais) %>% distinct()
+
+
+# Plot
+p <- simpleNetwork(data, height="100px", width="100px",        
+        Source = 1,                 # column number of source
+        Target = 2,                 # column number of target
+        linkDistance = 10,          # distance between node. Increase this value to have more space between nodes
+        charge = -900,                # numeric value indicating either the strength of the node repulsion (negative value) or attraction (positive value)
+        fontSize = 14,               # size of the node names
+        fontFamily = "serif",       # font og node names
+        linkColour = "#666",        # colour of edges, MUST be a common colour for the whole graph
+        nodeColour = "#69b3a2",     # colour of nodes, MUST be a common colour for the whole graph
+        opacity = 0.9,              # opacity of nodes. 0=transparent. 1=no transparency
+        zoom = T                    # Can you zoom on the figure?
+        )
+
+
+# save the widget
+library(htmlwidgets)
+saveWidget(p, file=paste0( getwd(), "/networkInteractive3.html"))
+
+
+
+```
+
+
+Gera um grafico de cordas com as Viagens dentro do Brasil
+
+```{r}
+
+# create a dataset:
+
+viagens_UF_Brasil <- df_Trecho%>% filter (Sequencia_Trecho==1 & Origem_UF != "Inválido" & Destino_UF != "Inválido") %>%
+                      select(from=Origem_UF , to=Destino_UF) 
+
+viagens_UF_Brasil <- na.omit(viagens_UF_Brasil)
+
+viagens_UF_Brasil <- viagens_UF_Brasil %>% group_by(from,to) %>% count()
+
+write.csv(viagens_UF_Brasil, "/cloud/project/Data/viagens_UF_Brasil.csv", row.names = FALSE)  
+
+chordDiagram(viagens_UF_Brasil, transparency = 0.5, diffHeight = convert_height(0.1, "mm"))
+
+
+
+```
 
 
 

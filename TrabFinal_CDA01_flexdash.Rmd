@@ -5,6 +5,7 @@ date: "22/06/2020"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
+runtime: shiny
 ---
 
 ```{r global, include=FALSE}
@@ -14,6 +15,10 @@ library(flexdashboard)
 library(lubridate)
 library(viridis)
 library(hrbrthemes)
+library(maps)
+library(RgoogleMaps)
+library(circlize)
+
 
 knitr::opts_chunk$set(cache=F)
 
@@ -85,33 +90,38 @@ diarias_total <- df_valor_org_dia$ValorTotalDiarias %>% sum(na.rm=T)
 outros_total <- df_valor_org_dia$ValorTotalOutros %>% sum(na.rm=T)
 
 
+# Carga das informações do mapa
+
+Temporario <- read_csv("Data/cidade_com_coord.csv")
+
+
 ```
 
 # Aba Principal - Viagem
 
 ## Row 1
 
-### Passagens de `r dia_min` a `r dia_max` (mil R$)
+### Passagens de `r dia_min` a `r dia_max` (milhões R$)
 
 <!-- ícones em: https://fontawesome.com/v4.7.0/icons/ -->
 
 ```{r,message=F}
-valueBox(round(passagens_total/10^3,1), icon = "fa-bomb")
+valueBox(round(passagens_total/10^6,1), icon = "fa fa-plane")
 ```
 
-### Diárias de `r dia_min` a `r dia_max` (mil R$)
+### Diárias de `r dia_min` a `r dia_max` (milhões R$)
 
 ```{r,message=F}
-valueBox(round(diarias_total/10^3,1), icon = "fa-exclamation-circle",
+valueBox(round(diarias_total/10^6,1), icon = "fa fa-bed",
          color="purple")
 ```
 
-### Outras de `r dia_min` a `r dia_max` (mil R$)
+### Outras de `r dia_min` a `r dia_max` (milhões R$)
 
 <!-- ícones em: https://fontawesome.com/v4.7.0/icons/ -->
 
 ```{r,message=F}
-valueBox(round(outros_total/10^3,1), icon = "fa-bomb",
+valueBox(round(outros_total/10^6,1), icon = "fa fa-money",
          color="red")
 ```
 
@@ -121,44 +131,48 @@ valueBox(round(outros_total/10^3,1), icon = "fa-bomb",
 
 ## Row 2
 
-### 5 Maiores Despesas de Passagens no Ano
+### 5 Maiores Despesas de Passagens por Órgão no Ano
 
 ```{r}
 
+renderPlot({
  df_valor_org_solicitante %>%  arrange(desc(ValorTotalPassagens)) %>% head(5)  %>%
     mutate(Nome_orgao_solicitante = fct_reorder(Nome_orgao_solicitante, (ValorTotalPassagens))) %>%
-    ggplot(aes(fill=Qtd, y=ValorTotalPassagens/1000, x=Nome_orgao_solicitante)) + 
+    ggplot(aes(fill=(Qtd/1000), y=ValorTotalPassagens/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
-    labs(y="" , x = "")  +  
+    labs(y="" , x = "", fill ="Qtd(mil)")  +  
+    theme(legend.position="bottom") +
     coord_flip() 
-
+})
 ```
 
-### 5 Maiores Despesas de Diárias no Ano
+### 5 Maiores Despesas de Diárias por Órgão no Ano
 
 ```{r,message=F}
-
+renderPlot({
     df_valor_org_solicitante %>%  arrange(desc(ValorTotalDiarias)) %>% head(5)  %>%
     mutate(Nome_orgao_solicitante = fct_reorder(Nome_orgao_solicitante, (ValorTotalDiarias))) %>%
-    ggplot(aes(fill=Qtd, y=ValorTotalDiarias/1000, x=Nome_orgao_solicitante)) + 
+    ggplot(aes(fill=(Qtd/1000), y=ValorTotalDiarias/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
-    labs(y="" , x = "")  +  
+    labs(y="" , x = "", fill ="Qtd(mil)")  +
+    theme(legend.position="bottom") +
     coord_flip() 
-
+})
 ```
 
-### 5 Maiores Outras Despesas de Viagem no Ano
+### 5 Maiores Outras Despesas de Viagem por Órgão no Ano
 
 ```{r}
 
-
+renderPlot({
    df_valor_org_solicitante %>%  arrange(desc(ValorTotalOutros)) %>% head(5)  %>%
     mutate(Nome_orgao_solicitante = fct_reorder(Nome_orgao_solicitante, (ValorTotalOutros))) %>%
-    ggplot(aes(fill=Qtd, y=ValorTotalOutros/1000, x=Nome_orgao_solicitante)) + 
+    ggplot(aes(fill=(Qtd/1000), y=ValorTotalOutros/1000, x=Nome_orgao_solicitante)) + 
     geom_bar(position="stack", stat="identity") +
-    labs(y="" , x = "")  +  
+    labs(y="" , x = "", fill ="Qtd(mil)")  +  
+    theme(legend.position="bottom") +
     coord_flip() 
-
+})
 ```
 
 
@@ -169,13 +183,15 @@ valueBox(round(outros_total/10^3,1), icon = "fa-bomb",
 
 ```{r}
 
-
+renderPlot({
     df_valor_org_solic_urgente %>%  mutate(Total=(ValorTotalPassagens+ValorTotalOutros+ValorTotalDiarias)) %>%
     ggplot(aes(fill=Viagem_Urgente, y=(Total)/1000, x=reorder(Nome_Orgao_Superior,Total))) + 
     geom_bar(position="dodge", stat="identity") +
-    labs(y="" , x = "")  +  
+    labs(y="" , x = "")  +
+    scale_fill_manual("Viagem Urgente", values = c("SIM" = "RED", "NÃO" = "GREEN")) +
+    theme(legend.position="bottom") +
     coord_flip() 
-
+})
 
 
 
@@ -186,7 +202,7 @@ valueBox(round(outros_total/10^3,1), icon = "fa-bomb",
 
 ```{r,message=F}
 
-
+renderPlot({
 df_Viagem %>% 
   filter(Situacao=="Realizada") %>%
   ggplot( aes(x=Nome_Orgao_Superior, y=Valor_diarias+Valor_passagens+Valor_outros_gastos, fill=Nome_Orgao_Superior)) +
@@ -202,11 +218,112 @@ df_Viagem %>%
    xlab('') +
    ylab('') +
     coord_flip()
-
+})
 
 
 
 
 ```
+
+
+# Evolução de Viagem
+
+## Row 1
+
+### Evolução das Passagens - Fica evidente o impacto da Pandemia no volume de Passagens
+
+
+```{r}
+renderPlot({
+
+  df_valor_org_dia %>% arrange((Periodo_Data_de_inicio)) %>%
+  ggplot() + 
+  geom_line( aes(x = Periodo_Data_de_inicio, y = ValorTotalPassagens/1000), color = "red") +
+  xlab('Data') +
+  ylab('Valor de Passagens(mil R$)') +
+  labs(color="Legend Text")
+
+})
+```
+
+
+## Row 2
+
+### Evolução das Outras Despesas - Porque houve um aumento no período de Pandemia ?
+
+
+```{r}
+
+renderPlot({
+ df_valor_org_dia %>% arrange((Periodo_Data_de_inicio)) %>%
+  ggplot() + 
+  geom_line( aes(x = Periodo_Data_de_inicio, y = ValorTotalOutros/1000), color = "blue") +
+  xlab('Data') +
+  ylab('Valor Outras Despesas(mil R$)') +
+  labs(color="Legend Text")
+
+})
+```
+
+
+## Row 3
+
+### Evolução das Diárias - Porque existe uma concentração em 01/01 ?
+
+
+```{r}
+
+renderPlot({
+  df_valor_org_dia %>% arrange((Periodo_Data_de_inicio)) %>%
+  ggplot() + 
+  geom_line( aes(x = Periodo_Data_de_inicio, y = ValorTotalDiarias/1000), color = "green4") +
+  xlab('Data') +
+  ylab('Valor Diárias (mil R$)') +
+  labs(color="Legend Text")
+
+})
+```
+
+# Locais das Viagens
+
+## Row 1
+
+### Localização das cidades para onde houve viagens iniciadas de `r dia_min` a `r dia_max`
+
+
+```{r}
+renderPlot({
+
+map('world',
+    col="#f2f2f2", fill=TRUE, bg="gray", lwd=0.05,
+    mar=rep(0,4),border=0, ylim=c(-80,80) 
+)
+points(x=Temporario$lon, y=Temporario$lat, col=Temporario$freq, cex=0.5, pch=20)
+
+})
+```
+
+
+# Viagens Nacionais
+
+## Row 1
+
+### Origem e Destino das Viagens Nacionais - Fica evidente o peso relativo do DF nas viagens do Governo Federal
+
+```{r}
+renderPlot({
+
+viagens_UF_Brasil_UF <- read_delim("Data/Viagem/viagens_UF_Brasil_UF.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE)
+
+viagens_UF_Brasil <- viagens_UF_Brasil_UF %>% select(from,to,n)
+  
+  chordDiagram(viagens_UF_Brasil, transparency = 0.5, diffHeight = convert_height(0.1, "mm"))
+
+
+
+})
+```
+
 
 
