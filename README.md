@@ -9,4 +9,4 @@ O arquivo final do Dashboard é o TrabFinal_CDA01_flexdash.Rmd
 
 O arquivo de suporte para as análises é o TrabFinal_CDA01.Rmd
 
-O arquivo networkInteractive3.Html contem a network 3D de viagens inicadas e terminadas fora do Brasil em 2020 (até 21/05/2020)
+O arquivo networkInteractive3.Html contem a network 3D de viagens inicadas e terminadas fora do Brasil em 2020 (até 26/05/2020)
