@@ -16,3 +16,5 @@ O arquivo zipado Exemplo_Viagens2020.zip contém um subset dos com os arquivos d
 2020_Passagem.csv
 2020_Trecho.csv
 2020_Viagem.csv
+
+Retirados de http://www.portaltransparencia.gov.br/download-de-dados/viagens
