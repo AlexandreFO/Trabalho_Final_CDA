@@ -1,7 +1,7 @@
 ---
 title: "Trabalho Final CDA MDT-01 - Flashdashboard"
 author: "Alexandre e Jorge"
-date: "22/06/2020"
+date: "28/06/2020"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
@@ -230,7 +230,7 @@ df_Viagem %>%
 
 ## Row 1
 
-### Evolução das Passagens - Fica evidente o impacto da Pandemia no volume de Passagens
+### Evolução das Passagens de `r dia_min` a `r dia_max`- Fica evidente o impacto da Pandemia no volume de Passagens
 
 
 ```{r}
@@ -249,7 +249,7 @@ renderPlot({
 
 ## Row 2
 
-### Evolução das Outras Despesas - Porque houve um aumento no período de Pandemia ?
+### Evolução das Outras Despesas de `r dia_min` a `r dia_max`- Porque houve um aumento no período de Pandemia ?
 
 
 ```{r}
@@ -268,7 +268,7 @@ renderPlot({
 
 ## Row 3
 
-### Evolução das Diárias - Porque existe uma concentração em 01/01 ?
+### Evolução das Diárias de `r dia_min` a `r dia_max`- Porque existe uma concentração em 01/01 ?
 
 
 ```{r}
@@ -288,7 +288,7 @@ renderPlot({
 
 ## Row 1
 
-### Localização das cidades para onde houve viagens iniciadas de `r dia_min` a `r dia_max`
+### Localização das cidades com viagens iniciadas de `r dia_min` a `r dia_max`
 
 
 ```{r}
@@ -308,7 +308,7 @@ points(x=Temporario$lon, y=Temporario$lat, col=Temporario$freq, cex=0.5, pch=20)
 
 ## Row 1
 
-### Origem e Destino das Viagens Nacionais - Fica evidente o peso relativo do DF nas viagens do Governo Federal
+### Origem e Destino das Viagens Nacionais de `r dia_min` a `r dia_max` - Fica evidente o peso relativo do DF nas viagens do Governo Federal
 
 ```{r}
 renderPlot({
